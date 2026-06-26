@@ -4540,12 +4540,17 @@ h1, h2, h3, h4{
 .hero-visual .hero-stage{ justify-content:center; margin-inline:auto; max-width:960px; column-gap:48px; }
 .hero-visual .hs-chat{ width:660px; max-width:100%; }
 /* the real prompt box fitted into the chat composer */
-.hs-composer-wrap .hero-prompt{ width:auto; max-width:none; margin:4px 14px 14px; border-radius:12px; padding:9px 9px 7px; }
+.hs-composer-wrap .hero-prompt{ width:auto; max-width:none; margin:4px 14px 14px; border-radius:12px; padding:9px 9px 7px; transition:box-shadow .2s ease, border-color .2s ease; }
+/* tap the prompt → grow the field so it's easier to type (JS centers it on screen) */
+.hs-composer-wrap .hero-prompt.hp-active{ box-shadow:0 14px 36px rgba(0,0,0,.13); border-color:var(--border-med); }
+.hs-composer-wrap .hero-prompt.hp-active .hero-prompt-input{ min-height:108px; font-size:15px; line-height:23px; }
+/* "Try a prompt" label above the example chips */
+.hero-examples-label{ width:100%; text-align:center; font-family:var(--mono); font-weight:500; font-size:11px; letter-spacing:.5px; text-transform:uppercase; color:var(--text-3); margin-bottom:4px; }
 .hs-composer-wrap .hero-prompt-input{ font-size:13.5px; line-height:19px; min-height:44px; padding:2px 4px 7px; }
 .hs-composer-wrap .hero-prompt-bar{ gap:8px; }
 .hs-composer-wrap .hero-prompt-model-btn{ height:29px; font-size:12px; padding:0 7px 0 9px; gap:6px; }
 .hs-composer-wrap .hero-prompt-model-btn .chev{ width:13px; height:13px; }
-.hs-composer-wrap .hero-prompt-send{ width:28px; height:28px; }
+.hs-composer-wrap .hero-prompt-send{ height:30px; padding:0 11px; }
 /* education section is now a single text column */
 .edu-bento{ grid-template-columns:minmax(0,1fr); }
 .edu-bento .edu-text{ max-width:880px; margin-inline:auto; }
@@ -4578,8 +4583,22 @@ h1, h2, h3, h4{
 .hpo-name{ flex:1; min-width:0; font-family:var(--sans); font-weight:600; font-size:14.5px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .hpo-price{ flex:none; font-family:var(--mono); font-size:11.5px; color:var(--text-3); }
 .hpo-sub{ font-family:var(--sans); font-size:12.5px; line-height:17px; color:var(--text-3); margin-top:2px; }
-.hero-prompt-send{ width:32px; height:32px; flex:none; margin-left:auto; border:0; border-radius:8px; cursor:pointer;
-  background:var(--btn-primary-bg); color:var(--btn-primary-fg); display:inline-flex; align-items:center; justify-content:center; }
+.hero-prompt-send{ height:32px; flex:none; margin-left:auto; border:0; border-radius:9px; cursor:pointer; gap:6px; padding:0 11px;
+  background:var(--btn-primary-bg); color:var(--btn-primary-fg); display:inline-flex; align-items:center; justify-content:center;
+  font-family:var(--sans); font-weight:600; font-size:12.5px; transition:opacity .14s; }
+.hero-prompt-send:hover{ opacity:.9; }
+.hero-prompt-send .hps-label{ line-height:1; }
+.hero-prompt-send .hps-spin{ display:none; width:13px; height:13px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; }
+.hero-prompt-send.loading{ pointer-events:none; }
+.hero-prompt-send.loading .hps-arrow{ display:none; }
+.hero-prompt-send.loading .hps-spin{ display:inline-block; animation:hps-rot .7s linear infinite; }
+@keyframes hps-rot{ to{ transform:rotate(360deg); } }
+/* zoom-into-the-chat transition when launching a prompt */
+.zoom-veil{ position:fixed; inset:0; z-index:200; background:var(--canvas,var(--bg)); opacity:0; pointer-events:none; transition:opacity .55s ease; }
+html.hero-zooming{ overflow:hidden; }
+html.hero-zooming .zoom-veil{ opacity:1; pointer-events:auto; }
+html.hero-zooming #hero{ transform:scale(1.22); opacity:0; transform-origin:center 45%; will-change:transform,opacity;
+  transition:transform .82s cubic-bezier(.5,0,.18,1), opacity .55s ease .22s; }
 .hero-prompt-send svg{ width:15px; height:15px; }
 .hero-prompt-examples{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; max-width:600px; margin:12px auto 0; pointer-events:auto; }
 .hero-prompt-chip{ font-family:var(--mono); font-size:11.5px; letter-spacing:.2px; color:var(--text-2);
@@ -4772,8 +4791,10 @@ h1, h2, h3, h4{
                           </button>
                           <div class="hero-prompt-menu" id="hero-prompt-menu" role="listbox" aria-label="Pick a model"></div>
                         </div>
-                        <button class="hero-prompt-send" id="hero-prompt-send" type="button" aria-label="Send prompt">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>
+                        <button class="hero-prompt-send" id="hero-prompt-send" type="button" aria-label="Try live">
+                          <span class="hps-label">Try Live</span>
+                          <svg class="hps-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>
+                          <span class="hps-spin" aria-hidden="true"></span>
                         </button>
                     </div>
                   </div>
@@ -4799,6 +4820,7 @@ h1, h2, h3, h4{
         </div><!-- /.hero-visual -->
 
           <div class="hero-prompt-examples" id="hero-prompt-examples" aria-label="Example prompts">
+            <span class="hero-examples-label">Try a prompt</span>
             <button class="hero-prompt-chip" type="button">Find new leads and email them by 9am</button>
             <button class="hero-prompt-chip" type="button">Build a browser game from one prompt</button>
             <button class="hero-prompt-chip" type="button">Recreate scroll motion from a video</button>
@@ -8555,6 +8577,7 @@ if (typeof ResizeObserver !== 'undefined'){
   // instant the chat returns to flow (otherwise it shows stale/overlapping lines until
   // the next cycle). firstDraw/lastPy reset → it snaps to the live layout, no glide.
   window.__heroRedraw = () => { firstDraw = true; lastPy = null; drawGraph(true); };
+  window.__heroFreeze = () => { paused = true; clearTimeout(cycleT); clearT(); };
 })();
 
 // ── Hero extras: the scrolling capability column + the coding-agents marquee ──
@@ -9821,6 +9844,7 @@ body.machine-mode .main-view > *:not(#hero){ display:none !important; }   /* cle
 }
 </style>
 
+<div class="zoom-veil" id="zoom-veil" aria-hidden="true"></div>
 <div class="mode-toggle" id="mode-toggle" role="tablist" aria-label="View mode">
   <button class="mode-toggle-btn active" id="mode-human" type="button" role="tab" aria-selected="true"><span class="dot"></span>HUMAN</button>
   <button class="mode-toggle-btn" id="mode-machine" type="button" role="tab" aria-selected="false"><span class="dot"></span>MACHINE</button>
@@ -10335,30 +10359,50 @@ zero wallet balance
     });
 
     var send = document.getElementById('hero-prompt-send');
+    var root = document.documentElement;
+    function launch(text){
+      var modelName = MODELS[modelIdx].name;
+      var agent = modelName.indexOf('GPT') === 0 || modelName.indexOf('Gemini') === 0 ? 'Codex' : 'Claude Code';
+      window.location.href = 'chat.html?agent=' + encodeURIComponent(agent) + '&model=' + encodeURIComponent(modelName) + '&prompt=' + encodeURIComponent(text);
+    }
+    // Loading state on Try Live → zoom into the chat → navigate to the live demo
     function fire(){
       var text = input.value.trim();
       if(!text){
         if(send && send.animate){ send.animate([{transform:'translateX(-3px)'},{transform:'translateX(3px)'},{transform:'translateX(0)'}],{duration:200}); }
         input.focus(); return;
       }
-      var modelName = MODELS[modelIdx].name;
-      var agent = modelName.indexOf('GPT') === 0 || modelName.indexOf('Gemini') === 0 ? 'Codex' : 'Claude Code';
-      if(send && send.animate){ send.animate([{transform:'scale(.86)'},{transform:'scale(1)'}],{duration:160,easing:'ease-out'}); }
-      window.location.href = 'chat.html?agent=' + encodeURIComponent(agent) + '&model=' + encodeURIComponent(modelName) + '&prompt=' + encodeURIComponent(text);
+      if(root.classList.contains('hero-zooming')) return;
+      if(window.__heroFreeze) window.__heroFreeze();   // stop the demo from cycling mid-transition
+      if(send) send.classList.add('loading');
+      setTimeout(function(){ root.classList.add('hero-zooming'); }, 470);   // zoom in
+      setTimeout(function(){ launch(text); }, 1180);                        // then enter the live chat
     }
     if(send) send.addEventListener('click', fire);
 
-    // Click an example prompt → populate the box, then send
+    // Click an example prompt → prefill the composer, then run the launch sequence
     document.querySelectorAll('.hero-prompt-chip').forEach(function(chip){
       chip.addEventListener('click', function(){
-        input.value = chip.textContent.trim();
-        input.focus();
-        input.setSelectionRange(input.value.length, input.value.length);
-        setTimeout(fire, 480);
+        if(root.classList.contains('hero-zooming')) return;
+        var text = chip.textContent.trim();
+        if(window.__heroFreeze) window.__heroFreeze();
+        input.value = text;
+        box.classList.add('hp-active');
+        try{ input.focus(); input.setSelectionRange(text.length, text.length); }catch(e){}
+        try{ box.scrollIntoView({ block:'center', behavior:'smooth' }); }catch(e){}
+        setTimeout(fire, 640);   // let the prefill land, then loading → zoom → navigate
       });
     });
     input.addEventListener('keydown', function(e){
       if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); fire(); }
+    });
+    // Tap/focus the prompt box → grow it and center it on screen for comfortable typing
+    input.addEventListener('focus', function(){
+      box.classList.add('hp-active');
+      try{ box.scrollIntoView({ block:'center', behavior:'smooth' }); }catch(err){}
+    });
+    input.addEventListener('blur', function(){
+      if(!input.value.trim()) box.classList.remove('hp-active');
     });
   }
   if(document.readyState === 'complete') init();
